@@ -8,6 +8,10 @@ android {
     namespace = "vcmsa.projects.personalbudgettingcorp"
     compileSdk = 35
 
+    buildFeatures {
+        viewBinding = true
+    }
+
     defaultConfig {
         applicationId = "vcmsa.projects.personalbudgettingcorp"
         minSdk = 32
@@ -43,6 +47,8 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.play.services.cast.framework)
+    implementation(libs.firebase.perf.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

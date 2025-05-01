@@ -5,79 +5,46 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 
-//Data Access Object for User-related database operations
-
 class UserDao(private val dbHelper: BudgetDatabase) {
-    private val TAG = "UserDao"
 
-     //Inserts a new user into the database
-     //returns The ID of the inserted user, or -1 if insertion failed
-    fun insert(user: User): Long {
-        val db = dbHelper.writableDatabase
-        val values = ContentValues().apply {
-            put(BudgetDatabase.COLUMN_USER_USERNAME, user.username)
-            put(BudgetDatabase.COLUMN_USER_PASSWORD, user.password)
-        }
+    private val database: SQLiteDatabase = dbHelper.writableDatabase
 
+    // Error handling
+    private fun <T> executeWithCatch(operation: () -> T?, errorMessage: String): T? {
         return try {
-            val id = db.insert(BudgetDatabase.TABLE_USERS, null, values)
-            if (id == -1L) {
-                Log.e(TAG, "Failed to insert user: ${user.username}")
-            }
-            id
+            operation()
         } catch (e: Exception) {
-            Log.e(TAG, "Exception while inserting user: ${e.message}")
-            -1
-        } finally {
-            db.close()
+            Log.e("UserDao", "$errorMessage: ${e.message}")
+            null
         }
     }
-    //Gets a user by username
-    fun getUserByUsername(username: String): User? {
-        val db = dbHelper.readableDatabase
-        val selection = "${BudgetDatabase.COLUMN_USER_USERNAME} = ?"
-        val selectionArgs = arrayOf(username)
 
-        var user: User? = null
-        var cursor: Cursor? = null
+    fun addUser(username: String, password: String): Long {
+        val values = ContentValues().apply {
+            put(BudgetDatabase.KEY_USERNAME, username)
+            put(BudgetDatabase.KEY_PASSWORD, password)
+        }
+        return executeWithCatch({
+            database.insert(BudgetDatabase.TABLE_USERS, null, values)
+        }, "Error adding user") ?: -1
+    }
 
-        try {
-            cursor = db.query(
+    fun getUserByUsername(username: String): Cursor? {
+        return executeWithCatch({
+            database.query(
                 BudgetDatabase.TABLE_USERS,
-                null,
-                selection,
-                selectionArgs,
+                arrayOf(BudgetDatabase.KEY_ID, BudgetDatabase.KEY_USERNAME, BudgetDatabase.KEY_PASSWORD),
+                "${BudgetDatabase.KEY_USERNAME} = ?",
+                arrayOf(username),
                 null,
                 null,
                 null
             )
-
-            if (cursor?.moveToFirst() == true) {
-                val idIndex = cursor.getColumnIndex(BudgetDatabase.COLUMN_USER_ID)
-                val usernameIndex = cursor.getColumnIndex(BudgetDatabase.COLUMN_USER_USERNAME)
-                val passwordIndex = cursor.getColumnIndex(BudgetDatabase.COLUMN_USER_PASSWORD)
-
-                // Check if columns exist
-                if (idIndex != -1 && usernameIndex != -1 && passwordIndex != -1) {
-                    user = User(
-                        id = cursor.getLong(idIndex),
-                        username = cursor.getString(usernameIndex),
-                        password = cursor.getString(passwordIndex)
-                    )
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Exception while getting user: ${e.message}")
-        } finally {
-            cursor?.close()
-            db.close()
-        }
-
-        return user
+        }, "Error getting user by username")
     }
-    //Authenticates a user
-    fun authenticate(username: String, password: String): User? {
-        val user = getUserByUsername(username)
-        return if (user != null && user.password == password) user else null
+
+    // Closes the database connection
+    fun close() {
+        database.close()
     }
 }
