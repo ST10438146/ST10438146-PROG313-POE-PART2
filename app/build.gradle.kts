@@ -73,8 +73,7 @@ dependencies {
     implementation ("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1")
     implementation ("androidx.lifecycle:lifecycle-livedata-ktx:2.6.1")
 
-    //For async operations
-    implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
+
 
     // Navigation component
     implementation ("androidx.navigation:navigation-fragment-ktx:2.6.0")
@@ -114,8 +113,7 @@ dependencies {
         // CameraX lifecycle extensions
         implementation("androidx.camera:camera-lifecycle:1.3.1")
 
-        // Kotlin coroutines for CameraX
-        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
 
         // Material Design for Bottom Navigation
         implementation("com.google.android.material:material:1.11.0")
