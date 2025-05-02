@@ -14,4 +14,6 @@
     <string name="invalid_credentials">Invalid username or password</string>
     <string name="registration_successful">Registration successful!</string>
     <string name="registration_failed_username_exists">Registration failed. Username may already exist.</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

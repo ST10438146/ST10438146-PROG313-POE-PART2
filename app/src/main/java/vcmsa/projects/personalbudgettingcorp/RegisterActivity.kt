@@ -1,44 +1,67 @@
 package vcmsa.projects.personalbudgettingcorp
 
+import android.content.Intent
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class RegisterActivity : AppCompatActivity() {
 
-    private lateinit var usernameEditTexts: EditText
-    private lateinit var passwordEditTexts: EditText
-    private lateinit var registerButtons: Button
-    private lateinit var dbHelper: BudgetDatabase
+    private lateinit var binding: ActivityRegistrationBinding
+    private lateinit var userDao: UserDao
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_register)
+        binding = ActivityRegistrationBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        usernameEditTexts = findViewById(R.id.usernameEditText)
-        passwordEditTexts = findViewById(R.id.passwordEditText)
-        registerButtons = findViewById(R.id.registerButton)
-        dbHelper = BudgetDatabase(this)
+        userDao = UserDao(this)
 
-        registerButtons.setOnClickListener {
-            val username = usernameEditTexts.text.toString().trim()
-            val password = passwordEditTexts.text.toString().trim()
+        binding.btnRegister.setOnClickListener {
+            val username = binding.etUsername.text.toString().trim()
+            val password = binding.etPassword.text.toString().trim()
+            val confirmPassword = binding.etConfirmPassword.text.toString().trim()
 
-            if (username.isEmpty() || password.isEmpty()) {
-                Toast.makeText(this, "Please enter username and password", Toast.LENGTH_SHORT).show()
+            if (username.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
+                Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            val result = dbHelper.addUser(username, password)
-            if (result > 0) {
-                Toast.makeText(this, "Registration successful", Toast.LENGTH_SHORT).show()
-                finish() // Optionally, go back to login screen
-            } else {
-                Toast.makeText(this, "Registration failed. Username might be taken.", Toast.LENGTH_SHORT).show()
+            if (password != confirmPassword) {
+                Toast.makeText(this, "Passwords do not match", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            CoroutineScope(Dispatchers.IO).launch {
+                val existingUser = userDao.getUserByUsername(username)
+                withContext(Dispatchers.Main) {
+                    if (existingUser != null) {
+                        Toast.makeText(this@RegistrationActivity, "Username already exists", Toast.LENGTH_SHORT).show()
+                    } else {
+                        val newUser = User(username = username, password = password) // WARNING: Insecure!
+                        val userId = userDao.addUser(newUser)
+                        if (userId != -1L) {
+                            Toast.makeText(this@RegistrationActivity, "Registration successful", Toast.LENGTH_SHORT).show()
+                            finish() // Go back to LoginActivity
+                        } else {
+                            Toast.makeText(this@RegistrationActivity, "Registration failed", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
             }
         }
+
+        binding.tvLogin.setOnClickListener {
+            finish() // Go back to LoginActivity
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        userDao.close()
     }
 }
-

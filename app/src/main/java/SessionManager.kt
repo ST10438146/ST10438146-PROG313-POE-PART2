@@ -20,7 +20,7 @@ class SessionManager(context: Context) {
         editor.putBoolean(IS_LOGIN, true)
         editor.putLong(KEY_ID, userId)
         editor.putString(KEY_USERNAME, username)
-        editor.apply() // Use apply for background commit
+        editor.apply()
     }
 
     //Gets user details
@@ -44,6 +44,6 @@ class SessionManager(context: Context) {
     //Clears session details
     fun logoutUser() {
         editor.clear()
-        editor.apply() // Use apply for background commit
+        editor.apply()
     }
 }

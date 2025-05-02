@@ -98,4 +98,28 @@ dependencies {
     testImplementation ("junit:junit:4.13.2")
     androidTestImplementation ("androidx.test.ext:junit:1.1.5")
     androidTestImplementation ("androidx.test.espresso:espresso-core:3.5.1")
+
+    dependencies {
+        // ... other dependencies
+
+        // CameraX core library
+        implementation("androidx.camera:camera-core:1.3.1")
+        // CameraX camera2 extensions
+        implementation("androidx.camera:camera-camera2:1.3.1")
+        // CameraX lifecycle extensions
+        implementation("androidx.camera:camera-lifecycle:1.3.1")
+
+        // Kotlin coroutines for CameraX
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+        // Material Design for Bottom Navigation
+        implementation("com.google.android.material:material:1.11.0")
+
+        // Glide for image loading
+        implementation("com.github.bumptech.glide:glide:4.16.0")
+        annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
+
+        // Firebase Storage for image uploads
+        implementation("com.google.firebase:firebase-storage-ktx")
+    }
 }
