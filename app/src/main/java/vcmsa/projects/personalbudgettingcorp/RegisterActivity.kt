@@ -8,6 +8,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.mindrot.jbcrypt.BCrypt
+import vcmsa.projects.personalbudgettingcorp.databinding.ActivityRegistrationBinding
+import vcmsa.projects.personalbudgettingcorp.UserDao
+import vcmsa.projects.personalbudgettingcorp.User
 
 class RegisterActivity : AppCompatActivity() {
 
@@ -40,15 +44,16 @@ class RegisterActivity : AppCompatActivity() {
                 val existingUser = userDao.getUserByUsername(username)
                 withContext(Dispatchers.Main) {
                     if (existingUser != null) {
-                        Toast.makeText(this@RegistrationActivity, "Username already exists", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@RegisterActivity, "Username already exists", Toast.LENGTH_SHORT).show()
                     } else {
-                        val newUser = User(username = username, password = password) // WARNING: Insecure!
+                        val hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt()) // Hash the password
+                        val newUser = User(username = username, password = hashedPassword)
                         val userId = userDao.addUser(newUser)
                         if (userId != -1L) {
-                            Toast.makeText(this@RegistrationActivity, "Registration successful", Toast.LENGTH_SHORT).show()
-                            finish() // Go back to LoginActivity
+                            Toast.makeText(this@RegisterActivity, "Registration successful", Toast.LENGTH_SHORT).show()
+                            finish()
                         } else {
-                            Toast.makeText(this@RegistrationActivity, "Registration failed", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@RegisterActivity, "Registration failed", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }

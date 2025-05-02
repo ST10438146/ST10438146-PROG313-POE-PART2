@@ -14,8 +14,8 @@
         android:layout_height="120dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="32dp"
-        android:contentDescription="@string/app_logo"
-        android:src="@drawable/ic_wallet" />
+        android:contentDescription="@drawable/"
+        android:src="@drawable/ic_expenses" />
 
     <TextView
         android:id="@+id/tvTitle"

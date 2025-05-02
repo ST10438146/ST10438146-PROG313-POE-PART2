@@ -5,7 +5,7 @@ import vcmsa.projects.personalbudgettingcorp.vcmsa.projects.personalbudgettingco
 import java.util.*
 
 //Repository class for Budget-related operations
-class BudgetRepository(private val budgetGoalDao: BudgetGoalDao) {
+class BudgetRepository<BudgetGoalDao>(private val budgetGoalDao: BudgetGoalDao) {
     private val TAG = "BudgetRepository"
 
     //Sets a monthly budget goal

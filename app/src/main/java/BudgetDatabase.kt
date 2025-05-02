@@ -8,6 +8,15 @@ import android.util.Log
 class BudgetDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
+
+        const val COLUMN_CATEGORY_NAME = "name"
+        const val COLUMN_CATEGORY_ID = "id"
+        const val COLUMN_CATEGORY_USER_ID = "userid"
+        const val COLUMN_EXPENSE_USER_ID = "userid"
+        const val COLUMN_EXPENSE_CATEGORY_ID = "categoryld"
+        const val COLUMN_EXPENSE_DESCRIPTION = "description"
+        const val COLUMN_EXPENSE_DATE = "date"
+        const val COLUMN_EXPENSE_AMOUNT = "amount"
         private const val TAG = "BudgetDatabase"
         private const val DATABASE_NAME = "budget_tracker.db"
         private const val DATABASE_VERSION = 1
@@ -48,6 +57,7 @@ class BudgetDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         const val KEY_MONTH = "month" // e.g., "2025-05"
         const val KEY_TOTAL_BUDGET = "total_budget"
         const val KEY_CATEGORY_LIMIT = "category_limit"
+        const val COLUMN_BUDGET_CATEGORY_LIMITS = "category_limits"
 
         // SQL to create tables
         private const val CREATE_USERS_TABLE =
@@ -91,7 +101,7 @@ class BudgetDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         )
     """.trimIndent()
         db.execSQL(createAchievementsTable)
-        insertDefaultAchievements(db) // Insert default achievements
+        insertDefaultAchievements(db) // Inserts default achievements
         try {
             db?.execSQL(CREATE_USERS_TABLE)
             db?.execSQL(CREATE_CATEGORIES_TABLE)

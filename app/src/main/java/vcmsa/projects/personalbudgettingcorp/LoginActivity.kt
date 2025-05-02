@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import vcmsa.projects.personalbudgettingcorp.databinding.ActivityLoginBinding
+import org.mindrot.jbcrypt.BCrypt
 
 class LoginActivity : AppCompatActivity() {
 
@@ -42,7 +43,7 @@ class LoginActivity : AppCompatActivity() {
             CoroutineScope(Dispatchers.IO).launch {
                 val user = userDao.getUserByUsername(username)
                 withContext(Dispatchers.Main) {
-                    if (user != null && user.password == password) { // WARNING: Insecure!
+                    if (user != null && BCrypt.checkpw(password, user.password)) {
                         sessionManager.createLoginSession(user.id, user.username)
                         navigateToMainActivity()
                         finish()

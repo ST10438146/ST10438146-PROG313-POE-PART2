@@ -46,7 +46,7 @@ class AchievementRepository(private val achievementDao: AchievementDao) {
         userId: Long,
         expenseRepository: ExpenseRepository,
         categoryRepository: CategoryRepository,
-        budgetRepository: BudgetRepository
+        budgetRepository: BudgetRepository<Any?>
     ) {
         try {
             val achievements = getAchievementsForUser(userId)

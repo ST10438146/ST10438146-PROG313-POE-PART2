@@ -109,6 +109,7 @@ class ExpenseDao(private val dbHelper: BudgetDatabase) {
         }, "Error getting expenses by category")
     }
 
+
     fun getExpenseById(expenseId: Long): Cursor? {
         return executeWithCatch({
             database.query(
@@ -132,5 +133,100 @@ class ExpenseDao(private val dbHelper: BudgetDatabase) {
 
     fun close() {
         database.close()
+    }
+    /**
+     * Inserts a new expense into the database.
+     *
+     * @param expense The Expense object to insert.
+     * @return The row ID of the newly inserted expense, or -1 if an error occurred.
+     */
+    fun insert(expense: Expense): Long {
+        val values = ContentValues().apply {
+            put(BudgetDatabase.COLUMN_EXPENSE_AMOUNT, expense.amount)
+            put(BudgetDatabase.COLUMN_EXPENSE_DATE, SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(expense.date))
+            put(BudgetDatabase.COLUMN_EXPENSE_DESCRIPTION, expense.description)
+            put(BudgetDatabase.COLUMN_EXPENSE_CATEGORY_ID, expense.categoryld)
+            put(BudgetDatabase.COLUMN_EXPENSE_USER_ID, expense.userld)
+            put(BudgetDatabase.COLUMN_EXPENSE_IMAGE_PATH, expense.imagePath)
+        }
+
+        return executeWithCatch({
+            database.insert(BudgetDatabase.TABLE_EXPENSES, null, values)
+        }, "Failed to insert expense") ?: -1
+    }
+
+    // Updates an existing expense in the database.
+
+    fun update(expense: Expense): Int {
+        val values = ContentValues().apply {
+            put(BudgetDatabase.COLUMN_EXPENSE_AMOUNT, expense.amount)
+            put(BudgetDatabase.COLUMN_EXPENSE_DATE, SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(expense.date))
+            put(BudgetDatabase.COLUMN_EXPENSE_DESCRIPTION, expense.description)
+            put(BudgetDatabase.COLUMN_EXPENSE_CATEGORY_ID, expense.categoryld)
+            put(BudgetDatabase.COLUMN_EXPENSE_USER_ID, expense.userld)
+            put(BudgetDatabase.COLUMN_EXPENSE_IMAGE_PATH, expense.imagePath)
+
+        }
+
+        val selection = "${BudgetDatabase.COLUMN_EXPENSE_USER_ID} = ?"
+        val selectionArgs = arrayOf(expense.id.toString())
+
+        return executeWithCatch({
+            database.update(BudgetDatabase.TABLE_EXPENSES, values, selection, selectionArgs)
+        }, "Failed to update expense") ?: 0
+    }
+
+    fun close() {
+        database.close()
+        dbHelper.close()
+    }
+
+    fun getTotalExpensesByCategory(
+        userId: Long,
+        startDateStr: String?,
+        endDateStr: String?
+    ): Map<Long, Double> {
+        val totalExpenses = mutableMapOf<Long, Double>()
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val selection = StringBuilder("${BudgetDatabase.COLUMN_EXPENSE_USER_ID} = ?")
+        val selectionArgs = mutableListOf(userId.toString())
+
+
+        if (startDateStr != null) {
+            selection.append(" AND ${BudgetDatabase.COLUMN_EXPENSE_DATE} >= ?")
+            selectionArgs.add(startDateStr)
+        }
+        if (endDateStr != null) {
+            selection.append(" AND ${BudgetDatabase.COLUMN_EXPENSE_DATE} <= ?")
+            selectionArgs.add(endDateStr)
+        }
+        val query = "SELECT ${BudgetDatabase.COLUMN_EXPENSE_CATEGORY_ID}, SUM(${BudgetDatabase.COLUMN_EXPENSE_AMOUNT}) " +
+                "FROM ${BudgetDatabase.TABLE_EXPENSES} " +
+                "WHERE $selection " +
+                "GROUP BY ${BudgetDatabase.COLUMN_EXPENSE_CATEGORY_ID}"
+
+
+        executeWithCatch({
+            val cursor: Cursor? = database.rawQuery(query, selectionArgs.toTypedArray())
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    do {
+                        val categoryId = it.getLong(it.getColumnIndexOrThrow(BudgetDatabase.COLUMN_EXPENSE_CATEGORY_ID))
+                        val totalAmount = it.getDouble(it.getColumnIndexOrThrow(1)) // Index 1 because of SUM()
+                        totalExpenses[categoryId] = totalAmount
+                    } while (it.moveToNext())
+                }
+            }
+        }, "Failed to get total expenses by category")
+
+
+        return totalExpenses
+    }
+
+
+
+    fun close() {
+        database.close()
+        dbHelper.close()
     }
 }

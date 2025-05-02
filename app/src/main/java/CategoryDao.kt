@@ -4,66 +4,53 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
+import kotlin.coroutines.jvm.internal.CompletedContinuation.context
 
-class CategoryDao(private val dbHelper: BudgetDatabase) {
+class CategoryDao(private  val dbHelper: BudgetDatabase) {
 
-    private val database: SQLiteDatabase = dbHelper.writableDatabase
+    private val dbHelper = BudgetDatabase(context)
+    private val database = dbHelper.writableDatabase
+    private val TAG = "CategoryDao"
 
     private fun <T> executeWithCatch(operation: () -> T?, errorMessage: String): T? {
         return try {
             operation()
         } catch (e: Exception) {
-            Log.e("CategoryDao", "$errorMessage: ${e.message}")
+            Log.e(TAG, "$errorMessage: ${e.message}")
             null
         }
     }
 
-    fun addCategory(categoryName: String): Long {
-        val values = ContentValues().apply {
-            put(BudgetDatabase.KEY_CATEGORY_NAME, categoryName)
-        }
-        return executeWithCatch({
-            database.insert(BudgetDatabase.TABLE_CATEGORIES, null, values)
-        }, "Error adding category") ?: -1
-    }
+    //Retrieves all categories for a specific user.
 
-    fun getAllCategories(): Cursor? {
-        return executeWithCatch({
-            database.query(
-                BudgetDatabase.TABLE_CATEGORIES,
-                arrayOf(BudgetDatabase.KEY_ID, BudgetDatabase.KEY_CATEGORY_NAME),
-                null,
-                null,
-                null,
-                null,
-                null
-            )
-        }, "Error getting all categories")
-    }
+    fun getCategoriesForUser(userId: Long): List<Category> {
+        val categories = mutableListOf<Category>()
+        val query = "SELECT * FROM ${BudgetDatabase.TABLE_CATEGORIES} WHERE ${BudgetDatabase.COLUMN_CATEGORY_USER_ID} = ?"
+        val selectionArgs = arrayOf(userId.toString())
 
-    fun getCategoryNameById(categoryId: Long): String? {
-        var categoryName: String? = null
-        val cursor = executeWithCatch({
-            database.query(
-                BudgetDatabase.TABLE_CATEGORIES,
-                arrayOf(BudgetDatabase.KEY_CATEGORY_NAME),
-                "${BudgetDatabase.KEY_ID} = ?",
-                arrayOf(categoryId.toString()),
-                null,
-                null,
-                null
-            )
-        }, "Error getting category name by ID")
-
-        cursor?.use {
-            if (it.moveToFirst()) {
-                categoryName = it.getString(it.getColumnIndexOrThrow(BudgetDatabase.KEY_CATEGORY_NAME))
+        executeWithCatch({
+            val cursor: Cursor? = database.rawQuery(query, selectionArgs)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    do {
+                        val id = it.getLong(it.getColumnIndexOrThrow(BudgetDatabase.COLUMN_CATEGORY_ID))
+                        val name = it.getString(it.getColumnIndexOrThrow(BudgetDatabase.COLUMN_CATEGORY_NAME))
+                        val userld = it.getLong(it.getColumnIndexOrThrow(BudgetDatabase.COLUMN_CATEGORY_USER_ID))
+                        val category = Category(id = id, name = name, userld = userld)
+                        categories.add(category)
+                    } while (it.moveToNext())
+                }
             }
-        }
-        return categoryName
+            categories
+        }, "Failed to get categories for user")
+
+        return categories
     }
+
+
 
     fun close() {
         database.close()
+        dbHelper.close()
     }
 }
