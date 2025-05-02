@@ -55,6 +55,7 @@ dependencies {
 
     //MPAndroidChart
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 
     // Core Android libraries
     implementation ("androidx.core:core-ktx:1.10.1")
@@ -90,6 +91,8 @@ dependencies {
 
     // MPAndroidChart for graphs
     implementation ("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
+    implementation(files("libs/bcrypt-2.0.0.jar"))
 
     //For image loading
     implementation ("com.github.bumptech.glide:glide:4.15.1")

@@ -6,122 +6,117 @@ import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import vcmsa.projects.personalbudgettingcorp.BudgetDatabase
 import vcmsa.projects.personalbudgettingcorp.BudgetGoal
+import android.content.Context
+import com.google.common.reflect.TypeToken
+import java.lang.reflect.Type
 
-//Data Access Object for BudgetGoal-related database operations
-class BudgetGoalDao(private val dbHelper: BudgetDatabase) {
-    private val TAG = "BudgetGoalDao"
+//Data Access Object for Budget-related database operations
+class BudgetDao(context: Context) {
+    private val dbHelper = BudgetDatabase(context)
+    private val database = dbHelper.writableDatabase
+    private val TAG = "BudgetDao"
+    private val gson = Gson()
 
-    //Inserts a new budget goal
-    fun insert(budgetGoal: BudgetGoal): Long {
-        val db = dbHelper.writableDatabase
-        val values = ContentValues().apply {
-            put(BudgetDatabase.COLUMN_BUDGET_AMOUNT, budgetGoal.amount)
-            put(BudgetDatabase.COLUMN_BUDGET_MONTH, budgetGoal.month)
-            put(BudgetDatabase.COLUMN_BUDGET_YEAR, budgetGoal.year)
-            put(BudgetDatabase.COLUMN_BUDGET_USER_ID, budgetGoal.userId)
-        }
-
+    // Error handling helper
+    private fun <T> executeWithCatch(operation: () -> T?, errorMessage: String): T? {
         return try {
-            val id = db.insert(BudgetDatabase.TABLE_BUDGET_GOALS, null, values)
-            if (id == -1L) {
-                Log.e(TAG, "Failed to insert budget goal")
-            }
-            id
+            operation()
         } catch (e: Exception) {
-            Log.e(TAG, "Exception while inserting budget goal: ${e.message}")
-            -1
-        } finally {
-            db.close()
+            Log.e(TAG, "$errorMessage: ${e.message}")
+            null
         }
     }
 
-    //Updates an existing budget goal
-    fun update(budgetGoal: BudgetGoal): Int {
-        val db = dbHelper.writableDatabase
+    //Inserts a new budget
+
+    fun insert(budget: Budget): Long {
+        val categoryLimitsJson = gson.toJson(budget.categoryLimits)
         val values = ContentValues().apply {
-            put(BudgetDatabase.COLUMN_BUDGET_AMOUNT, budgetGoal.amount)
+            put(BudgetDatabase.COLUMN_BUDGET_TOTAL, budget.totalBudget)
+            put(BudgetDatabase.COLUMN_BUDGET_USER_ID, budget.userId)
+            put(BudgetDatabase.COLUMN_BUDGET_CATEGORY_LIMITS, categoryLimitsJson)
         }
 
-        val selection = """
-            ${BudgetDatabase.COLUMN_BUDGET_USER_ID} = ? AND
-            ${BudgetDatabase.COLUMN_BUDGET_MONTH} = ? AND
-            ${BudgetDatabase.COLUMN_BUDGET_YEAR} = ?
-        """.trimIndent()
-
-        val selectionArgs = arrayOf(
-            budgetGoal.userId.toString(),
-            budgetGoal.month.toString(),
-            budgetGoal.year.toString()
-        )
-
-        return try {
-            val rowsAffected = db.update(
-                BudgetDatabase.TABLE_BUDGET_GOALS,
-                values,
-                selection,
-                selectionArgs
-            )
-
-            // If no existing record to update, inserts a new one
-            if (rowsAffected == 0) {
-                insert(budgetGoal)
-                return 1
-            }
-
-            rowsAffected
-        } catch (e: Exception) {
-            Log.e(TAG, "Exception while updating budget goal: ${e.message}")
-            0
-        } finally {
-            db.close()
-        }
+        return executeWithCatch({
+            database.insert(BudgetDatabase.TABLE_BUDGETS, null, values)
+        }, "Failed to insert budget") ?: -1
     }
 
-    //Gets a budget goal for a specific month and year
-    fun getBudgetGoal(userId: Long, month: Int, year: Int): BudgetGoal? {
-        val db = dbHelper.readableDatabase
+    //Gets budget for a user
 
-        val selection = """
-            ${BudgetDatabase.COLUMN_BUDGET_USER_ID} = ? AND
-            ${BudgetDatabase.COLUMN_BUDGET_MONTH} = ? AND
-            ${BudgetDatabase.COLUMN_BUDGET_YEAR} = ?
-        """.trimIndent()
-
-        val selectionArgs = arrayOf(userId.toString(), month.toString(), year.toString())
-
-        var budgetGoal: BudgetGoal? = null
-        var cursor: Cursor? = null
-
-        try {
-            cursor = db.query(
-                BudgetDatabase.TABLE_BUDGET_GOALS,
+    fun getBudgetForUser(userId: Long): Budget? {
+        var budget: Budget? = null
+        val cursor = executeWithCatch({
+            database.query(
+                BudgetDatabase.TABLE_BUDGETS,
                 null,
-                selection,
-                selectionArgs,
+                "${BudgetDatabase.COLUMN_BUDGET_USER_ID} = ?",
+                arrayOf(userId.toString()),
                 null,
                 null,
                 null
             )
+        }, "Failed to get budget for user")
 
-            if (cursor?.moveToFirst() == true) {
-                val idIndex = cursor.getColumnIndex(BudgetDatabase.COLUMN_BUDGET_ID)
-                val amountIndex = cursor.getColumnIndex(BudgetDatabase.COLUMN_BUDGET_AMOUNT)
-
-                // Checks if columns exist
-                if (idIndex != -1 && amountIndex != -1) {
-                    val id = cursor.getLong(idIndex)
-                    val amount = cursor.getDouble(amountIndex)
-
-                    budgetGoal = BudgetGoal(id, amount, month, year, userId)
-                }
+        cursor?.use {
+            if (it.moveToFirst()) {
+                budget = mapCursorToBudget(it)
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Exception while getting budget goal: ${e.message}")
-        } finally {
-            cursor?.close()
-            db.close()
+        }
+        return budget
+    }
+
+    //Updates an existing budget
+
+    fun update(budget: Budget): Int {
+        val categoryLimitsJson = gson.toJson(budget.categoryLimits)
+        val values = ContentValues().apply {
+            put(BudgetDatabase.COLUMN_BUDGET_TOTAL, budget.totalBudget)
+            put(BudgetDatabase.COLUMN_BUDGET_CATEGORY_LIMITS, categoryLimitsJson)
         }
 
-        return budgetGoal
+        val selection = "${BudgetDatabase.COLUMN_BUDGET_USER_ID} = ?"
+        val selectionArgs = arrayOf(budget.userId.toString())
+
+        return executeWithCatch({
+            database.update(
+                BudgetDatabase.TABLE_BUDGETS,
+                values,
+                selection,
+                selectionArgs
+            )
+        }, "Failed to update budget") ?: 0
+    }
+
+    //Deletes budget for a user
+
+    fun delete(userId: Long): Int {
+        val selection = "${BudgetDatabase.COLUMN_BUDGET_USER_ID} = ?"
+        val selectionArgs = arrayOf(userId.toString())
+
+        return executeWithCatch({
+            database.delete(BudgetDatabase.TABLE_BUDGETS, selection, selectionArgs)
+        }, "Failed to delete budget") ?: 0
+    }
+
+    //Helper function to map a cursor to a Budget object
+    private fun mapCursorToBudget(cursor: Cursor): Budget {
+        val categoryLimitsJson = cursor.getString(cursor.getColumnIndexOrThrow(BudgetDatabase.COLUMN_BUDGET_CATEGORY_LIMITS))
+        val type: Type = object : TypeToken<Map<Long, Double>>() {}.type
+        val categoryLimits: Map<Long, Double> = gson.fromJson(categoryLimitsJson, type) ?: emptyMap()
+
+        return Budget(
+            id = cursor.getLong(cursor.getColumnIndexOrThrow(BudgetDatabase.COLUMN_BUDGET_ID)),
+            totalBudget = cursor.getDouble(cursor.getColumnIndexOrThrow(BudgetDatabase.COLUMN_BUDGET_TOTAL)),
+            userId = cursor.getLong(cursor.getColumnIndexOrThrow(BudgetDatabase.COLUMN_BUDGET_USER_ID)),
+            categoryLimits = categoryLimits
+        )
+    }
+
+    //Closes the database connection.
+    fun close() {
+        database.close()
+        dbHelper.close()
     }
 }
+
